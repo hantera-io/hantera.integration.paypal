@@ -1,1 +1,1 @@
-# Hantera Paypal Integration
+# Hantera PayPal Integration
