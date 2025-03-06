@@ -1,0 +1,34 @@
+###############
+# Requests Reactor
+###############
+
+uri: /resources/components/paypal/paypal.requests.hreactor
+spec:
+  displayName: paypal.requests.hreactor
+  description: Reactor for PayPal
+  runtime: reactor
+  componentVersion: 1.0.0
+  codeFile: ./components/paypal.requests.hreactor
+---
+uri: /resources/reactors/paypal.requests
+spec:
+  componentId: paypal/paypal.requests.hreactor
+---
+
+###############
+# Rules
+###############
+
+uri: /resources/components/paypal/paypal.onPaymentCreated.hrule
+spec:
+  displayName: paypal.onPaymentCreated.hrule
+  description: Rule for PayPal
+  runtime: rule
+  componentVersion: 1.0.0
+  codeFile: ./components/paypal.onPaymentCreated.hrule
+---
+uri: /resources/rules/paypal.onPaymentCreated
+spec:
+  displayName: PayPal Integration
+  components:
+    - componentId: paypal/paypal.onPaymentCreated.hrule

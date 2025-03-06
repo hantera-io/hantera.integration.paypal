@@ -1,0 +1,93 @@
+let baseUrl |> registry->'externalServices/paypal/baseUrl'
+let encodedCredentials |> registry->'externalServices/paypal/encodedCredentials'
+
+let oauthToken: {
+  scope: text
+  access_token: text
+  token_type: text
+  app_id: text
+  expires_in: number
+  nonce: text
+}
+
+let generateAccessToken = (_) =>
+  web.http($'{baseUrl}/v1/oauth2/token', {
+    method = 'POST',
+    headers = {
+      'Authorization' -> $'Basic {encodedCredentials}'
+      'Content-Type' -> 'application/x-www-form-urlencoded'
+    }
+    body = 'grant_type=client_credentials'
+  }) match
+    (res: HttpResponseOk) |> res.content match
+      oauthToken |> res.content.access_token
+
+let getPayment(paymentId: uuid) =>
+  let paymentQuery =
+    query payments(
+      paymentNumber
+      providerKey
+      currencyCode
+      authorizedAmount
+      creditBalance
+      capturedBalance
+      createdAt
+      dynamic
+      tags
+    )
+    filter $'paymentId == {paymentId}'
+  from paymentQuery match
+    QueryError |> nothing
+    |>
+      paymentQuery
+      first
+
+from {
+  createdPayment = (opts: {
+    paymentId: uuid
+    attempt: nothing|number
+  }) =>
+
+    let payment = getPayment(opts.paymentId)
+
+    let retry (attempt:number) =>
+      let jobId = scheduleJob(
+        'paypal.requests'
+        'createdPayment'
+        {
+          paymentId = opts.paymentId
+          attempt = attempt
+        }
+        now + 10 seconds
+      )
+      from $'Error creating the PayPal order, retrying ({attempt}/5): {jobId}'
+    
+    let accessToken = generateAccessToken({})
+
+    from payment match
+      nothing |> 'Payment not found'
+      |> web.http($'{baseUrl}/v2/checkout/orders', {
+        method ='POST',
+        headers = {
+          'Authorization' -> $'Bearer {accessToken}'
+          'Content-Type' -> 'application/json'
+        }
+        body = {
+          intent = 'CAPTURE'
+          purchase_units = [
+            {
+              amount = {
+                currency_code = payment.currencyCode
+                value = 100.00
+              }
+            }
+          ]
+        }
+      }
+      ) match
+        HttpResponseOk |> $'PayPal order created for payment {payment.paymentNumber}'   
+        |> opts.attempt match
+          nothing |> retry(2)
+          when opts.attempt < 5 |> retry(opts.attempt + 1)
+          |> 'PayPal order creation failed, giving up'
+}
