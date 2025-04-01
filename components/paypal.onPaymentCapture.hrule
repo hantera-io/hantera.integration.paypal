@@ -1,0 +1,10 @@
+param input: OnPaymentCapture
+
+from {
+    effect = 'scheduleJob'
+    reactorId = 'paypal.requests'
+    method = 'craetedCapture'
+    argument = {
+        paymentId = input.payment.paymentId
+    }
+}

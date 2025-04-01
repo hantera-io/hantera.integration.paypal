@@ -1,0 +1,14 @@
+from {
+  createPayment = (opts: {
+    currencyCode: text
+  }) =>
+    messageActor (
+      'payment'
+      'new'
+      'create'
+      {
+        currencyCode = opts.currencyCode
+        privderKey = 'stripe'
+      }
+    )
+}
