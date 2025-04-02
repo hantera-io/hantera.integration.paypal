@@ -2,13 +2,16 @@ from {
   createPayment = (opts: {
     currencyCode: text
   }) =>
-    messageActor (
+    let paymentId = newid
+    from messageActor (
       'payment'
-      'new'
+      $'{paymentId}'
       'create'
       {
         currencyCode = opts.currencyCode
-        privderKey = 'stripe'
+        providerKey = 'stripe'
       }
-    )
+    ) match
+      (err: Error) |> err
+      |> { paymentId = paymentId }
 }
