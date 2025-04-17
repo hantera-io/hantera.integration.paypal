@@ -1,15 +1,15 @@
 export createPayment = (currencyCode: text) =>
-    let paymentId = newid
-    from messageActor (
-      'payment'
-      $'{paymentId}'
-      [{
-        type = 'create'
-        body = {
-          currencyCode = currencyCode
-          providerKey = 'stripe'
-        }
-      }]
-    ) match
-      (err: Error) |> err
-      (result) |> result
+   let paymentId = newid
+   from messageActor (
+     'payment'
+     $'{paymentId}'
+     [{
+       type = 'create'
+       body = {
+         currencyCode = currencyCode
+         providerKey = 'stripe'
+       }
+     }]
+   ) match
+     (err: Error) |> err
+     (result) |> result
