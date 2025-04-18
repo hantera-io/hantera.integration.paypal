@@ -1,4 +1,4 @@
-export createPayment = (currencyCode: text) =>
+export createPayment(currencyCode: text) =>
    let paymentId = newid
    from messageActor (
      'payment'
