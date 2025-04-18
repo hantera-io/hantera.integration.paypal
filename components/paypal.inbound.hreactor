@@ -13,3 +13,55 @@ export createPayment(currencyCode: text) =>
    ) match
      (err: Error) |> err
      (result) |> result
+
+let purchaseUnit: {
+  reference_id: text
+  amount: {
+    currency_code: text
+    value: text
+    breakdown: value
+  }
+  custom_id: text
+}
+
+let paypalOrder: {
+  update_time: text
+  create_time: text
+  purchase_units: [purchaseUnit]
+}
+
+let addAuthorization(
+  resource: paypalOrder
+) =>
+  let pu = resource.purchase_units first
+  from pu match
+    purchaseUnit |> messageActor(
+      'payment'
+      $'{pu.custom_id}'
+      [{
+        type = 'applyCommands'
+        body = {
+          commands = [{
+            type = 'createAuthorization'
+            authorizationNumber = $'{pu.reference_id}'
+            amount = pu.amount.value
+          }]
+        }
+      }]
+    )
+    |> 'Bad Request: No purchase unit found'
+
+export webhook(
+  id: text
+  create_time: text
+  resource_type: text
+  event_version: text
+  event_type: text
+  summary: text
+  resource: value
+) =>
+  from event_type match
+    'CHECKOUT.ORDER.APPROVED' |> resource match
+      paypalOrder |> addAuthorization(resource)
+      |> 'Bad Request: Format doesn''t match PayPal Order'
+    |> 'Not supported'
