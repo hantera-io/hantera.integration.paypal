@@ -1,21 +1,4 @@
 ###############
-# Requests Reactor
-###############
-
-uri: /resources/components/paypal/paypal.requests.hreactor
-spec:
-  displayName: paypal.requests.hreactor
-  description: Reactor for PayPal, triggered by Hantera processes
-  runtime: reactor
-  componentVersion: 1.0.0
-  codeFile: ./components/paypal.requests.hreactor
----
-uri: /resources/reactors/paypal.requests
-spec:
-  componentId: paypal/paypal.requests.hreactor
----
-
-###############
 # Inbound Reactor
 ###############
 
@@ -30,22 +13,3 @@ spec:
 uri: /resources/reactors/paypal.inbound
 spec:
   componentId: paypal/paypal.inbound.hreactor
----
-
-###############
-# Rules
-###############
-
-uri: /resources/components/paypal/paypal.onPaymentCapture.hrule
-spec:
-  displayName: paypal.onPaymentCapture.hrule
-  description: Rule for PayPal
-  runtime: rule
-  componentVersion: 1.0.0
-  codeFile: ./components/paypal.onPaymentCapture.hrule
----
-uri: /resources/rules/paypal.onPaymentCapture
-spec:
-  displayName: PayPal Integration
-  components:
-    - componentId: paypal/paypal.onPaymentCapture.hrule
