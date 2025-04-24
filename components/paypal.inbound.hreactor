@@ -30,10 +30,18 @@ let paypalOrder: {
   purchase_units: [purchaseUnit]
 }
 
+let paypalCapture: {
+  amount: {
+    value: text
+  }
+  custom_id: text
+  id: text
+}
+
 let addAuthorization(
-  resource: paypalOrder
+  order: paypalOrder
 ) =>
-  let pu = resource.purchase_units first
+  let pu = order.purchase_units first
   from pu match
     purchaseUnit |> messageActor(
       'payment'
@@ -51,6 +59,32 @@ let addAuthorization(
     )
     |> 'Bad Request: No purchase unit found'
 
+let addCharge(
+  capture: paypalCapture
+) =>
+  let paymentQuery =
+    query payments(paymentId)
+    filter $'paymentId == {capture.custom_id}'
+    navigate authorizations(authorizationNumber)
+  let authorizationNumber = paymentQuery match
+    QueryError |> $'Error finding payment {capture.custom_id}'
+    |>
+      paymentQuery
+      select r => r.authorizations select a => a.authorizationNumber
+      flatten first
+  from messageActor(
+    'payment'
+    $'{capture.custom_id}'
+    [{
+      type = 'charge'
+      body = {
+        amount = capture.amount.value
+        authorizationNumber = authorizationNumber
+        transactionReference = capture.id
+      }
+    }]
+  )
+
 export webhook(
   id: text
   create_time: text
@@ -61,7 +95,14 @@ export webhook(
   resource: value
 ) =>
   from event_type match
-    'CHECKOUT.ORDER.APPROVED' |> resource match
-      paypalOrder |> addAuthorization(resource)
-      |> 'Bad Request: Format doesn''t match PayPal Order'
-    |> 'Not supported'
+    'CHECKOUT.ORDER.APPROVED' |> resource_type match
+      'checkout-order' |> resource match
+        paypalOrder |> addAuthorization(resource)
+        |> 'Bad Request: Resource format doesn''t match expected format for PayPal Checkout Order'
+      |> $'Bad Request: Resource type {resource_type} doesn''t match event type CHECKOUT.ORDER.APPROVED'
+    'PAYMENT.CAPTURE.COMPLETED' |> resource_type match
+      'capture' |> resource match
+        paypalCapture |> addCharge(resource)
+        |> 'Bad Request: Resource format doesn''t match expected format for PayPal Capture'
+      |> $'Bad Request: Resource type {resource_type} doesn''t match event type PAYMENT.CAPTURE.COMPLETED'
+    |> $'Not supported event type {event_type}'
